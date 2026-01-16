@@ -1,0 +1,164 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>OrderHub Test Panel</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.7/signalr.min.js"></script>
+    <style>
+        body {
+            font-family: Arial;
+            margin: 20px;
+        }
+
+        input, button {
+            margin: 5px;
+            padding: 5px;
+        }
+
+        #messages {
+            border: 1px solid #ccc;
+            padding: 10px;
+            max-height: 300px;
+            overflow: auto;
+            margin-top: 10px;
+        }
+
+        .section {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>OrderHub Test Panel</h1>
+
+    <div class="section">
+        <label>JWT Token:</label><br>
+        <input type="text" id="jwtToken" style="width:400px;" placeholder="Paste JWT here">
+        <button onclick="startConnection()">Connect Hub</button>
+    </div>
+
+    <div class="section">
+        <label>Order ID:</label>
+        <input type="number" id="orderId" placeholder="Order ID">
+        <button onclick="joinOrder()">Join Order Group</button>
+        <button onclick="leaveOrder()">Leave Order Group</button>
+    </div>
+
+    <div class="section">
+        <button onclick="createOrder()">Create Order</button>
+        <button onclick="acceptOrder()">Accept Order</button>
+        <button onclick="assignDriver()">Assign Driver</button>
+        <button onclick="pickupOrder()">Pickup Order</button>
+        <button onclick="deliverOrder()">Deliver Order</button>
+        <button onclick="cancelOrder()">Cancel Order</button>
+    </div>
+
+    <h2>Messages:</h2>
+    <div id="messages"></div>
+
+    <script>
+        let connection;
+        let token = "";
+        let orderID = 0;
+
+        function startConnection() {
+            token = document.getElementById("jwtToken").value.trim();
+            if (!token) { alert("Please enter a valid JWT token"); return; }
+
+            connection = new signalR.HubConnectionBuilder()
+                .withUrl("/orderHub", { accessTokenFactory: () => token })
+                .withAutomaticReconnect()
+                .build();
+
+            connection.on("ReceiveOrderUpdate", (message) => {
+                const div = document.getElementById("messages");
+                div.innerHTML += `<p>${JSON.stringify(message)}</p>`;
+                div.scrollTop = div.scrollHeight;
+            });
+
+            connection.start()
+                .then(() => logMessage("Connected to OrderHub"))
+                .catch(err => {
+                    console.error(err.toString());
+                    setTimeout(startConnection, 2000);
+                });
+        }
+
+        function logMessage(msg) {
+            const div = document.getElementById("messages");
+            div.innerHTML += `<p><strong>${msg}</strong></p>`;
+            div.scrollTop = div.scrollHeight;
+        }
+
+        function joinOrder() {
+            orderID = parseInt(document.getElementById("orderId").value);
+            if (!orderID) { alert("Enter a valid Order ID"); return; }
+            connection.invoke("JoinOrderGroup", orderID)
+                .then(() => logMessage("Joined Order " + orderID))
+                .catch(err => console.error(err.toString()));
+        }
+
+        function leaveOrder() {
+            connection.invoke("LeaveOrderGroup", orderID)
+                .then(() => logMessage("Left Order " + orderID))
+                .catch(err => console.error(err.toString()));
+        }
+
+        async function callApi(url, method = 'POST', body = null) {
+            if (!token) { alert("Set JWT token first"); return; }
+            const res = await fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: body ? JSON.stringify(body) : null
+            });
+            const data = await res.json();
+            logMessage(`API Response: ${JSON.stringify(data)}`);
+            return data;
+        }
+
+        function createOrder() {
+            const body = {
+                restaurantID: 1,
+                toAddress: "مصطفي ماهر",
+                fromAddress: "sa3ed",
+                packageType: "Burger",
+                packagePrice: 100
+            };
+            callApi('/api/order', 'POST', body)
+                .then(res => { if (res.customerID) orderID = res.customerID; });
+        }
+
+        function acceptOrder() {
+            if (!orderID) { alert("Set Order ID first"); return; }
+            callApi(`/api/order/acceptorder/${orderID}`);
+        }
+
+        function assignDriver() {
+            if (!orderID) { alert("Set Order ID first"); return; }
+            const driverID = prompt("Enter Driver ID:");
+            if (!driverID) return;
+            callApi(`/api/order/assigndriver?orderID=${orderID}&driverID=${driverID}`);
+        }
+
+        function pickupOrder() {
+            if (!orderID) { alert("Set Order ID first"); return; }
+            callApi(`/api/order/pickuporder/${orderID}`);
+        }
+
+        function deliverOrder() {
+            if (!orderID) { alert("Set Order ID first"); return; }
+            callApi(`/api/order/deliverorder/${orderID}`);
+        }
+
+        function cancelOrder() {
+            if (!orderID) { alert("Set Order ID first"); return; }
+            const reason = prompt("Enter reason for cancel:");
+            if (!reason) return;
+            callApi(`/api/order/cancelorder?orderID=${orderID}&reason=${reason}`);
+        }
+    </script>
+</body>
+</html>

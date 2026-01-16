@@ -1,0 +1,151 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Driver Live Tracking</title>
+
+    <!-- SignalR -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.7/signalr.min.js"></script>
+
+    <!-- Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <style>
+        body {
+            font-family: Arial;
+            margin: 20px;
+        }
+
+        input, button {
+            margin: 5px;
+            padding: 6px;
+        }
+
+        #map {
+            height: 450px;
+            margin-top: 20px;
+        }
+
+        #messages {
+            border: 1px solid #ccc;
+            padding: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>🚗 Driver Tracking Test (Customer / Restaurant View)</h2>
+
+    <label>JWT Token:</label><br>
+    <input type="text" id="jwtToken" style="width:400px;">
+    <button onclick="connect()">Connect Hub</button>
+
+    <br><br>
+
+    <label>Driver ID:</label>
+    <input type="number" id="driverId">
+
+    <button onclick="sendNewLocation()">📍 Send New Location (50m+)</button>
+
+    <div id="messages"></div>
+    <div id="map"></div>
+
+    <script>
+        let connection;
+        let map;
+        let marker;
+
+        let currentLat = null;
+        let currentLng = null;
+
+        // Initialize map
+        map = L.map('map').setView([30.0444, 31.2357], 13); // Cairo
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+        function log(msg) {
+            document.getElementById("messages").innerHTML += `<div>${msg}</div>`;
+        }
+
+        function connect() {
+            const token = document.getElementById("jwtToken").value;
+
+            connection = new signalR.HubConnectionBuilder()
+                .withUrl("/hubs/DriverTracking", {
+                    accessTokenFactory: () => token
+                })
+                .withAutomaticReconnect()
+                .build();
+
+            connection.on("ReceiveDriverLocation", dto => {
+                log(`📡 Location received → Driver ${dto.driverID}`);
+                updateMap(dto.latitude, dto.longitude);
+            });
+
+            connection.start()
+                .then(() => {
+                    log("✅ Connected to Hub");
+                    getInitialLocation();
+                })
+                .catch(err => console.error(err));
+        }
+
+        // Get real GPS location once
+        function getInitialLocation() {
+            navigator.geolocation.getCurrentPosition(pos => {
+                currentLat = pos.coords.latitude;
+                currentLng = pos.coords.longitude;
+                updateMap(currentLat, currentLng);
+                log("📍 Initial GPS location loaded");
+            }, () => {
+                // fallback
+                currentLat = 30.0444;
+                currentLng = 31.2357;
+            });
+        }
+
+        // Generate new location at least 50 meters away
+        function generateOffsetLocation() {
+            const minMeters = 50;
+            const maxMeters = 120;
+
+            const distance = minMeters + Math.random() * (maxMeters - minMeters);
+            const angle = Math.random() * 2 * Math.PI;
+
+            const deltaLat = (distance * Math.cos(angle)) / 111320;
+            const deltaLng = (distance * Math.sin(angle)) / (111320 * Math.cos(currentLat * Math.PI / 180));
+
+            currentLat += deltaLat;
+            currentLng += deltaLng;
+        }
+
+        function sendNewLocation() {
+            const driverId = parseInt(document.getElementById("driverId").value);
+            if (!driverId) return alert("Enter Driver ID");
+
+            generateOffsetLocation();
+
+            connection.invoke("UpdateDriverLocation", {
+                DriverID: driverId,
+                Latitude: currentLat,
+                Longitude: currentLng
+            });
+
+            log(`🚀 Location sent (${currentLat.toFixed(6)}, ${currentLng.toFixed(6)})`);
+        }
+
+        function updateMap(lat, lng) {
+            if (!marker) {
+                marker = L.marker([lat, lng]).addTo(map);
+            } else {
+                marker.setLatLng([lat, lng]);
+            }
+            map.setView([lat, lng], 16);
+        }
+    </script>
+
+</body>
+</html>

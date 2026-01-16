@@ -1,0 +1,111 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>NotificationHub Test Panel</title>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.7/signalr.min.js"></script>
+
+    <style>
+        body {
+            font-family: Arial;
+            margin: 20px;
+        }
+
+        input, button {
+            margin: 5px;
+            padding: 6px;
+        }
+
+        #messages {
+            border: 1px solid #ccc;
+            padding: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 15px;
+        }
+
+        .notification {
+            border-bottom: 1px solid #ddd;
+            padding: 8px 0;
+        }
+
+        .title {
+            font-weight: bold;
+        }
+
+        .time {
+            font-size: 12px;
+            color: gray;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>NotificationHub Test Panel</h1>
+
+    <div>
+        <label>JWT Token:</label><br>
+        <input type="text" id="jwtToken" style="width:500px;" placeholder="Paste JWT here">
+        <button onclick="startConnection()">Connect</button>
+    </div>
+
+    <h3>Notifications:</h3>
+    <div id="messages"></div>
+
+    <script>
+        let connection;
+        let token = "";
+
+        function startConnection() {
+            token = document.getElementById("jwtToken").value.trim();
+            if (!token) {
+                alert("Please enter JWT token");
+                return;
+            }
+
+            connection = new signalR.HubConnectionBuilder()
+                .withUrl("/hubs/Notification", {
+                    accessTokenFactory: () => token
+                })
+                .withAutomaticReconnect()
+                .build();
+
+            // 🔔 Listen for notifications
+            connection.on("ReceiveNotification", (notification) => {
+                renderNotification(notification);
+            });
+
+            connection.start()
+                .then(() => logMessage("Connected to NotificationHub"))
+                .catch(err => {
+                    console.error(err.toString());
+                    setTimeout(startConnection, 2000);
+                });
+        }
+
+        function logMessage(msg) {
+            const div = document.getElementById("messages");
+            div.innerHTML += `<p><strong>${msg}</strong></p>`;
+            div.scrollTop = div.scrollHeight;
+        }
+
+        function renderNotification(n) {
+            const div = document.getElementById("messages");
+
+            const html = `
+                <div class="notification">
+                    <div class="title">${n.title}</div>
+                    <div>${n.body}</div>
+                    <div>${n.data ?? ""}</div>
+                    <div class="time">${new Date(n.createdAt).toLocaleString()}</div>
+                </div>
+            `;
+
+            div.innerHTML += html;
+            div.scrollTop = div.scrollHeight;
+        }
+    </script>
+
+</body>
+</html>
