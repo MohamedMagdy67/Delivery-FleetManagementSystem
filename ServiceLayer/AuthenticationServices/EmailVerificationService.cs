@@ -41,9 +41,9 @@ namespace ServiceLayer.AuthenticationServices
             user.IsEmailVerified = false;
 
             await _context.SaveChangesAsync();
-
+            
             var link =
-                $"{_config["Email:ClientUrl"]}/verify-email?token={token}";
+                $"{_config["Email:ClientUrl"]}/verify-email.html?token={token}";
 
             await _emailService.SendAsync(
                 user.Email,

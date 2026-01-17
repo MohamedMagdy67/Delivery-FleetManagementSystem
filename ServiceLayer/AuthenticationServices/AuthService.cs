@@ -12,6 +12,7 @@ using System.Data;
 using System.Security.Claims;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.Extensions.Options;
+using Microsoft.AspNetCore.Mvc;
 namespace ServiceLayer.AuthenticationServices
 {
     public class AuthService:IAuthService
@@ -82,7 +83,24 @@ if(string.IsNullOrWhiteSpace(dto.Name) || string.IsNullOrWhiteSpace(dto.Email) |
                 signingCredentials: creds
             );
 
-            return new AuthDTO { Token = new JwtSecurityTokenHandler().WriteToken(token), ExpireDate = expire };
+            return new AuthDTO { Token = new JwtSecurityTokenHandler().WriteToken(token), ExpireDate = expire,role = user.Role };
+        }
+        public UserDTO GetMe(int userID)
+        {
+            var user = _context.Users.Find(userID);
+            if(user == null)
+            {
+                throw new Exception("User Not Found");
+            }
+            return new UserDTO
+            {
+                Name = user.Name,
+                Email = user.Email,
+                Role = user.Role,
+                CreatedAt = user.CreatedAt,
+                Phone = user.Phone
+
+            };
         }
 
     }

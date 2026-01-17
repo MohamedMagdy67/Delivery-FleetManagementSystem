@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using SystemContext.SystemDbContext;
 using ServiceLayer.AuthenticationServices;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -136,6 +136,17 @@ builder.Services.AddSignalR();
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("Frontend", policy =>
+    {
+        policy
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowAnyOrigin();
+    });
+});
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
@@ -176,7 +187,8 @@ if (app.Environment.IsDevelopment())
 }
 app.UseMiddleware<Delivery_FleetManagementSystem.Middlewares.ApiExceptionMiddleware>();
 
-app.UseStaticFiles(); 
+app.UseStaticFiles();
+app.UseCors("Frontend");
 
 app.UseAuthentication();
 app.UseAuthorization();

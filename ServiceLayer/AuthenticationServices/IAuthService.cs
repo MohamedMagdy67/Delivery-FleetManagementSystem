@@ -11,7 +11,8 @@ namespace ServiceLayer.AuthenticationServices
     public interface IAuthService
     {
         public Task<UserDTO> RegisterAsync(RegisterDTO dto); 
-        public AuthDTO Login(LoginDTO dto); 
+        public AuthDTO Login(LoginDTO dto);
+        public UserDTO GetMe(int userID);
 
 
     }

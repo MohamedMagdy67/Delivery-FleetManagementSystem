@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using SystemModel.Entities;
 
 namespace SystemDTOS.AuthenticationDTOS
 {
@@ -10,6 +11,7 @@ namespace SystemDTOS.AuthenticationDTOS
     {
         public DateTime ExpireDate { get; set; }
         public string Token { get; set; }
+        public UserRole role { get; set; }
 
     }
 }

@@ -66,7 +66,7 @@ namespace ServiceLayer.RestaurantServices
         }
         public List<RestaurantResponseDTO> GetRestaurants()
         {
-            var Restaurants = _context.Restaurants.ToList();
+            var Restaurants = _context.Restaurants.Where(r => r.IsActive == true).ToList();
             List<RestaurantResponseDTO> res = new List<RestaurantResponseDTO>();
             
             foreach(var r in Restaurants)

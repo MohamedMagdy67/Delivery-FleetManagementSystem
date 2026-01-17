@@ -1,8 +1,10 @@
 ﻿using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ServiceLayer.AuthenticationServices;
+using System.Security.Claims;
 using SystemDTOS.AuthenticationDTOS;
 namespace Delivery_FleetManagementSystem.Controllers
 {
@@ -28,6 +30,14 @@ namespace Delivery_FleetManagementSystem.Controllers
             AuthDTO auth = _authService.Login(dto);
             return Ok(auth);
 
+        }
+        [Authorize]
+        [HttpGet]
+        public ActionResult GetMe()
+        {
+            var userID = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            var user = _authService.GetMe(userID);
+            return Ok(user);
         }
         
 

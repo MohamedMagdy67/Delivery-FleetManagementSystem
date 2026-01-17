@@ -15,6 +15,7 @@ using Microsoft.AspNetCore.Razor.TagHelpers;
 using ServiceLayer.LocationServices;
 using SystemDTOS.LocationDTOS;
 using System.Data;
+using System.Net;
 namespace ServiceLayer.OrderServices
 {
     public class OrderService
@@ -574,6 +575,43 @@ namespace ServiceLayer.OrderServices
             await _orderHub.Clients.Group($"Order_{order.ID}")
              .SendAsync("ReceiveOrderUpdate", new { Status = order.Status.ToString() });
 
+        }
+        public List<OrderDTO> GetMyOrders(int userID)
+        {
+            var user = _context.Users.Find(userID);
+            if(user == null)
+            {
+                throw new Exception("User Not Found");
+            }
+            if(user.Role != UserRole.Customer)
+            {
+                throw new Exception("User Is Not a Customer");
+            }
+
+            var orders = _context.Orders.Where(o => o.CustomerID == userID);
+            List<OrderDTO> Ords = new List<OrderDTO>();
+            foreach(var order in orders)
+            {
+                Ords.Add(new OrderDTO
+                {
+                    OrderID = order.ID,
+                    CreatedAt = order.CreatedAt,
+                    CustomerID = order.CustomerID,
+                    PackageType = order.PackageType,
+                    TotalPrice = order.TotalPrice,
+                    ToAddress = order.ToAddress,
+                    FromAddress = order.FromAddress,
+                    PaymentStatus = order.PaymentStatus.ToString(),
+                    Status = order.Status.ToString(),
+                    DeliveryFee = order.DeliveryFee,
+                    RestaurantID = order.RestaurantID
+
+
+
+
+                });
+            }
+            return Ords;
         }
         public async Task<int> GetNearestDriverAsync(decimal RestaurantLongtude,decimal RestaurantLatitude)
         {

@@ -116,7 +116,19 @@ namespace Delivery_FleetManagementSystem.Controllers
             });
         }
         #endregion
-         
+
+        #region Get My Orders
+
+        [Authorize(Roles = "Customer")]
+        [HttpGet]
+        public ActionResult GetMyOrders()
+        {
+            var userID = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            var Orders = _orderService.GetMyOrders(userID);
+            return Ok(Orders);
+        }
+        #endregion
+
 
     }
 }
